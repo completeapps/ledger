@@ -19,7 +19,7 @@ html::-webkit-scrollbar {
 <button id="syncDownBtn" type="button">Download from cloud</button><span id="syncStatus"></span><button id="reset">Reset filters</button><button id="export">Export backup</button><button id="import">Import backup</button><input id="file" type="file" accept="application/json,.json" hidden></div><div class="tools">
   <button id="googleLogin" type="button">Continue with Google</button>
   <span id="accountStatus" role="status">Not signed in</span>
-  <button id="" type="button" hidden>Sign out</button>
+  <button id="googleLogout" type="button" hidden>Sign out</button>
 </div><p id="message" role="status"></p><div class="table-wrap"><table><thead><tr><th scope="col">Date paid</th><th scope="col">Paid to / What for</th><th scope="col">Amount</th><th scope="col">Method</th><th scope="col">Notes</th><th scope="col">Actions</th></tr></thead><tbody id="rows"></tbody></table></div><p class="note">Saved in this browser only. No cloud sync or password protection. Export backups regularly; clearing browser data can erase this ledger. Do not enter card numbers, passwords, or banking credentials.<br>Totals include all recorded payments, regardless of filters. Amounts are in USD. This page records payments; it does not send money.</p></main></div><footer class="footer">COMPLETE / LEDGER</footer>
 <dialog id="editor"><form id="form"><div class="dialog-head"><h3 id="dialogTitle">Add Payment</h3><button type="button" id="close" aria-label="Close">×</button></div><label>Date paid<input id="date" type="date" required></label><label>Paid to / What for<input id="description" maxlength="150" required placeholder="e.g., Alex — lunch"></label><label>Amount (USD)<input id="amount" type="number" min="0.01" max="100000000" step="0.01" required placeholder="0.00"></label><label>Payment method<select id="method"><option>Cash</option><option>Debit card</option><option>Credit card</option><option>Bank transfer</option><option>Venmo</option><option>Cash App</option><option>PayPal</option><option>Other</option></select></label><label>Notes (optional)<textarea id="notes" maxlength="1000" placeholder="e.g., Paid in full"></textarea></label><div class="form-buttons"><button type="submit" class="primary">Save Payment</button><button type="button" id="cancel">Cancel</button></div></form></dialog>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -100,7 +100,7 @@ function updateAccount(session) {
   const user = session?.user;
 
   $('googleLogin').hidden = !!user;
-  $('').hidden = !user;
+  $('googleLogout').hidden = !user;
   $('accountStatus').textContent = user
     ? `Signed in as ${user.email}`
     : 'Not signed in';
@@ -123,7 +123,7 @@ $('googleLogin').onclick = async () => {
   }
 };
 
-$('').onclick = async () => {
+$('googleLogout').onclick = async () => {
   const { error } = await cloud.auth.signOut();
 
   if (error) {
