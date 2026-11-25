@@ -15,7 +15,8 @@ html::-webkit-scrollbar {
 }
 </style></head><body><div class="page"><header><div class="brand" aria-hidden="true">C</div><button   class="mode"   id="theme"   type="button"   aria-label="Switch to light mode" >   <span class="mode-icon" aria-hidden="true">☀</span>   <span class="mode-label">Light</span> </button><h1>COMPLETE LEDGER</h1><p>a simple record of what you pay.</p></header>
 <section class="stats" aria-label="Payment totals"><div class="stat"><p>Paid this month</p><strong id="monthTotal">$0.00</strong></div><div class="stat"><p>Paid all time</p><strong id="allTotal">$0.00</strong></div><div class="stat"><p>Payments recorded</p><strong id="count">0</strong></div></section>
-<main><div class="section-head"><h2>Payments</h2><button class="primary" id="add">+ Add Payment</button></div><div class="tools"><input id="search" type="search" placeholder="Search payments..." aria-label="Search payments"><input id="month" type="month" aria-label="Filter by month"><button id="reset">Reset filters</button><button id="export">Export backup</button><button id="import">Import backup</button><input id="file" type="file" accept="application/json,.json" hidden></div><div class="tools">
+<main><div class="section-head"><h2>Payments</h2><button class="primary" id="add">+ Add Payment</button></div><div class="tools"><input id="search" type="search" placeholder="Search payments..." aria-label="Search payments"><input id="month" type="month" aria-label="Filter by month"><button id="syncUpBtn" type="button">Upload to cloud</button>
+<span id="syncStatus"></span><button id="reset">Reset filters</button><button id="export">Export backup</button><button id="import">Import backup</button><input id="file" type="file" accept="application/json,.json" hidden></div><div class="tools">
   <button id="googleLogin" type="button">Continue with Google</button>
   <span id="accountStatus" role="status">Not signed in</span>
   <button id="googleLogout" type="button" hidden>Sign out</button>
@@ -66,6 +67,30 @@ $('search').oninput=render;$('month').oninput=render;$('reset').onclick=()=>{$('
 $('export').onclick=()=>{const blob=new Blob([JSON.stringify({version:1,payments},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='complete-ledger-'+today()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
 $('import').onclick=()=>$('file').click();$('file').onchange=async()=>{const file=$('file').files[0];if(!file)return;try{if(file.size>5000000)throw Error();const data=JSON.parse(await file.text());if(data.version!==1||!Array.isArray(data.payments)||!data.payments.every(valid)||new Set(data.payments.map(p=>p.id)).size!==data.payments.length)throw Error();if(confirm('Replace your current '+payments.length+' payments with '+data.payments.length+' payments from this backup? Export your current ledger first if needed.'))commit(data.payments)}catch{$('message').textContent='Import failed. Choose a valid Complete Ledger JSON backup under 5 MB.'}finally{$('file').value=''}};
 render();
+async function uploadLocalToCloud() {
+  const status = document.getElementById('syncStatus');
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) { status.textContent = 'Sign in first.'; return; }
+
+  const raw = JSON.parse(localStorage.getItem('complete-ledger-v1') || '{}');
+  const list = Array.isArray(raw) ? raw : (raw.payments || []);
+  if (!list.length) { status.textContent = 'No local payments found.'; return; }
+
+  const rows = list.map(p => ({
+    user_id: session.user.id,
+    id: p.id,
+    date: p.date,
+    description: p.description,
+    cents: p.cents,
+    method: p.method,
+    notes: p.notes || ''
+  }));
+
+  status.textContent = 'Uploading...';
+  const { error } = await supabaseClient.from('payments').upsert(rows);
+  status.textContent = error ? 'Error: ' + error.message : 'Uploaded ' + rows.length + ' payments.';
+}
+document.getElementById('syncUpBtn').addEventListener('click', uploadLocalToCloud);
 const cloud = window.supabase.createClient(
   'https://ceduokdkvurwkkmapmny.supabase.co',
   'sb_publishable_0Lo5PBirPFsBJ3UnYNrejg_rWByNt9w'
