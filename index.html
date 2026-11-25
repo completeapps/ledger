@@ -69,7 +69,7 @@ $('import').onclick=()=>$('file').click();$('file').onchange=async()=>{const fil
 render();
 async function uploadLocalToCloud() {
   const status = document.getElementById('syncStatus');
-  const { data: { session } } = await supabaseClient.auth.getSession();
+  const { data: { session } } = await cloud.auth.getSession();
   if (!session) { status.textContent = 'Sign in first.'; return; }
 
   const raw = JSON.parse(localStorage.getItem('complete-ledger-v1') || '{}');
@@ -87,7 +87,7 @@ async function uploadLocalToCloud() {
   }));
 
   status.textContent = 'Uploading...';
-  const { error } = await supabaseClient.from('payments').upsert(rows);
+  const { error } = await cloud.from('payments').upsert(rows);
   status.textContent = error ? 'Error: ' + error.message : 'Uploaded ' + rows.length + ' payments.';
 }
 document.getElementById('syncUpBtn').addEventListener('click', uploadLocalToCloud);
